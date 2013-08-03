@@ -1,0 +1,67 @@
+!!! 5
+html
+  head
+    script(src="/socket.io/socket.io.js")
+    script(src="http://code.jquery.com/jquery-2.0.3.min.js")
+    script
+      var socket = io.connect();
+
+      $(function() {
+        $("#register_button").on("click", function(event) {
+          event.preventDefault();
+          socket.emit("register", {
+            phone_number: $("#phone_number").val()
+          });
+        });
+
+        $("#verify_button").on("click", function(event) {
+          event.preventDefault();
+          socket.emit("verify", {
+            phone_number: $("#phone_number").val(),
+            code: $("#code").val()
+          });
+        });
+
+        socket.on("code_generated", function(data) {
+          $("#register").fadeOut();
+          $("#verify").fadeIn();
+          $("#update").fadeOut();
+          $("#register_instructions").fadeOut();
+          $("#verify_instructions").fadeIn();
+        });
+
+        socket.on("update", function(data) {
+          $("#update").html(data.message);
+          $("#update").fadeIn();
+        });
+
+        socket.on("reset", function(data) {
+          $("#register_instructions").fadeIn();
+          $("#verify_instructions").fadeOut();
+          $("#update").fadeOut();
+          $("#register").fadeIn();
+          $("#verify").fadeOut();
+        });
+
+        socket.on("verified", function(data) {
+          $("#register").fadeOut();
+          $("#verify").fadeOut();
+          $("#register_instructions").fadeOut();
+          $("#verify_instructions").fadeOut();
+        });
+      });
+
+
+
+  body
+    strong#update(style="display: none")
+    p#register_instructions Enter your phone number:
+    p#verify_instructions(style="display: none") Enter your verification code:
+    div#register
+      form
+        input(type="text")#phone_number
+        input(type="submit", value="Register")#register_button
+    div#verify(style="display: none")
+      form
+        input(type="text")#code
+        input(type="submit", value="Verify")#verify_button
