@@ -12,16 +12,20 @@ var users = nStore.new('data/users.db', function () {
 
 server.listen(3000);
 
+app.get('/',function(req,res){
+  res.render('index.jade')
+});
+
 function createUser(phone_number, code, socket) {
-  users.save(phone_number, {code: code, verified: false}, function (err) {
-    if (err) { throw err; }
+  users.save(phone_number, {code: code, verified: false}, function (saverr) {
+    if (saverr) { throw saverr; }
     client.sendSms({
         to: phone_number,
         from: process.env.twilio_number,
         body: 'Your verification code is: ' + code
-    }, function(err, responseData) {
-      if (err) { 
-        users.remove(phone_number, function(err) {if (err) { throw err; }});
+    }, function(twilioerr, responseData) {
+      if (twilioerr) { 
+        users.remove(phone_number, function(remerr) {if (remerr) { throw remerr; }});
         socket.emit('update', {message: "Invalid phone number!"});
       } else {
         socket.emit('code_generated');
@@ -43,8 +47,8 @@ io.sockets.on('connection', function(socket) {
   console.log('socket.io connected');
   socket.on('register', function(data) {
     var code = speakeasy.totp({key: 'abc123'});
-    users.get(data.phone_number, function (err, doc, key) {
-      if (err) {
+    users.get(data.phone_number, function (geterr, doc, key) {
+      if (geterr) {
         createUser(data.phone_number, code, socket);
       }
       else if (checkVerified(socket, doc.verified, data.phone_number) == false) {
@@ -57,15 +61,15 @@ io.sockets.on('connection', function(socket) {
 
   socket.on('verify', function(data) {
     var code = Math.floor((Math.random()*999999)+111111);
-    users.get(data.phone_number, function (err, doc, key) {
-      if (err) {
+    users.get(data.phone_number, function (geterr, doc, key) {
+      if (geterr) {
         socket.emit('reset');
         socket.emit('update', {message: "You have not requested a verification code for " + data.phone_number + " yet!"});
       }
       else if (checkVerified(socket, doc.verified, data.phone_number) == false && doc.code == parseInt(data.code)) {
         socket.emit('verified');
         socket.emit('update', {message: "You have successfully verified " + data.phone_number + "!"});
-        users.save(data.phone_number, {code: parseInt(data.code), verified: true}, function (err) { if (err) { throw err; }});
+        users.save(data.phone_number, {code: parseInt(data.code), verified: true}, function (saverr) { if (saverr) { throw saverr; }});
       }
       else {
         socket.emit('update', {message: "Invalid verification code!"});
@@ -75,6 +79,3 @@ io.sockets.on('connection', function(socket) {
   });
 });
 
-app.get('/',function(req,res){
-  res.render('index.jade')
-});
