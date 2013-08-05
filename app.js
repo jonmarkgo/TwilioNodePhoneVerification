@@ -60,7 +60,6 @@ io.sockets.on('connection', function(socket) {
   });
 
   socket.on('verify', function(data) {
-    var code = Math.floor((Math.random()*999999)+111111);
     users.get(data.phone_number, function (geterr, doc, key) {
       if (geterr) {
         socket.emit('reset');
